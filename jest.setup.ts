@@ -1,5 +1,3 @@
-/// <reference types="jest" />
-
 import { Logger } from '@nestjs/common';
 
 // Disable logger in tests for cleaner output
@@ -20,4 +18,3 @@ Logger.overrideLogger({
   debug: () => {},
   verbose: () => {},
 });
-

@@ -9,6 +9,10 @@
       "section": "Bug Fixes"
     },
     {
+      "type": "hot_fix",
+      "section": "Hot Fixes"
+    },
+    {
       "type": "perf",
       "section": "Performance Improvements"
     },
@@ -57,6 +61,12 @@
     "tag": false,
     "commit": false,
     "bump": false
-  }
+  },
+  "compareUrlFormat": "https://github.com/{{owner}}/{{repository}}/compare/{{previousTag}}...{{currentTag}}",
+  "commitUrlFormat": "https://github.com/{{owner}}/{{repository}}/commit/{{hash}}",
+  "issueUrlFormat": "https://github.com/{{owner}}/{{repository}}/issues/{{id}}",
+  "userUrlFormat": "https://github.com/{{user}}",
+  "header": "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\nSee [Conventional Commits](https://conventionalcommits.org) for commit guidelines.",
+  "packageFiles": ["package.json"],
+  "bumpFiles": ["package.json"]
 }
-

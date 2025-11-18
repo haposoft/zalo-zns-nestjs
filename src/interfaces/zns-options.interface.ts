@@ -9,4 +9,3 @@ export interface ZnsAsyncOptions {
   inject?: any[];
   imports?: any[];
 }
-

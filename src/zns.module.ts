@@ -1,5 +1,5 @@
 import { DynamicModule, Module, Provider } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { ZnsService } from './zns.service';
 import { ZnsModuleOptions, ZnsAsyncOptions } from './interfaces/zns-options.interface';
 import { ZNS_MODULE_OPTIONS } from './zns.constants';
@@ -9,10 +9,8 @@ export class ZnsModule {
   /**
    * Create providers array for module configuration
    */
-  private static createProviders(
-    options: ZnsModuleOptions | ZnsAsyncOptions,
-  ): Provider[] {
-    if ('useFactory' in options) {
+  private static createProviders(options: ZnsModuleOptions | ZnsAsyncOptions): Provider[] {
+    if ('useFactory' in options && options.useFactory) {
       return [
         {
           provide: ZNS_MODULE_OPTIONS,
@@ -92,4 +90,3 @@ export class ZnsModule {
     };
   }
 }
-

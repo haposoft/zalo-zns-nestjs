@@ -12,4 +12,3 @@ export interface ZnsSendResponse {
     trackingId: string;
   };
 }
-

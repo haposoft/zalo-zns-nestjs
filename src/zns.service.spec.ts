@@ -19,22 +19,23 @@ describe('ZnsService', () => {
   /**
    * Create a mock axios instance
    */
-  const createMockAxiosInstance = (): jest.Mocked<AxiosInstance> => ({
-    post: jest.fn(),
-    get: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-    patch: jest.fn(),
-    request: jest.fn(),
-    head: jest.fn(),
-    options: jest.fn(),
-    defaults: {} as any,
-    interceptors: {
-      request: { use: jest.fn(), eject: jest.fn(), clear: jest.fn() },
-      response: { use: jest.fn(), eject: jest.fn(), clear: jest.fn() },
-    },
-    getUri: jest.fn(),
-  } as any);
+  const createMockAxiosInstance = (): jest.Mocked<AxiosInstance> =>
+    ({
+      post: jest.fn(),
+      get: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+      patch: jest.fn(),
+      request: jest.fn(),
+      head: jest.fn(),
+      options: jest.fn(),
+      defaults: {} as any,
+      interceptors: {
+        request: { use: jest.fn(), eject: jest.fn(), clear: jest.fn() },
+        response: { use: jest.fn(), eject: jest.fn(), clear: jest.fn() },
+      },
+      getUri: jest.fn(),
+    }) as any;
 
   beforeEach(() => {
     mockAxiosInstance = createMockAxiosInstance();
@@ -84,15 +85,12 @@ describe('ZnsService', () => {
 
       const result = await service.sendMessage(message);
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/message/template',
-        {
-          phone: message.phone,
-          template_id: message.templateId,
-          template_data: message.templateData,
-          tracking_id: undefined,
-        },
-      );
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/message/template', {
+        phone: message.phone,
+        template_id: message.templateId,
+        template_data: message.templateData,
+        tracking_id: undefined,
+      });
       expect(result).toEqual(mockResponse.data);
       expect(result.error).toBe(0);
       expect(result.data?.trackingId).toBe('tracking-123');
@@ -182,4 +180,3 @@ describe('ZnsService', () => {
     });
   });
 });
-

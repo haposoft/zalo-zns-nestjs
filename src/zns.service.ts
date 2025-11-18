@@ -38,34 +38,25 @@ export class ZnsService {
     try {
       this.logger.log(`Sending ZNS message to ${message.phone}`);
 
-      const response = await this.axiosInstance.post<ZnsSendResponse>(
-        API_ENDPOINT,
-        {
-          phone: message.phone,
-          template_id: message.templateId,
-          template_data: message.templateData || {},
-          tracking_id: message.trackingId,
-        },
-      );
+      const response = await this.axiosInstance.post<ZnsSendResponse>(API_ENDPOINT, {
+        phone: message.phone,
+        template_id: message.templateId,
+        template_data: message.templateData || {},
+        tracking_id: message.trackingId,
+      });
 
       const { data } = response;
       if (data.error === 0) {
-        this.logger.log(
-          `ZNS message sent successfully. Tracking ID: ${data.data?.trackingId}`,
-        );
+        this.logger.log(`ZNS message sent successfully. Tracking ID: ${data.data?.trackingId}`);
       } else {
         this.logger.warn(`ZNS message failed: ${data.message}`);
       }
 
       return data;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(
-        `Error sending ZNS message: ${errorMessage}`,
-        errorStack,
-      );
+      this.logger.error(`Error sending ZNS message: ${errorMessage}`, errorStack);
       throw error;
     }
   }
@@ -80,19 +71,14 @@ export class ZnsService {
       return [];
     }
 
-    const results = await Promise.allSettled(
-      messages.map((message) => this.sendMessage(message)),
-    );
+    const results = await Promise.allSettled(messages.map((message) => this.sendMessage(message)));
 
     return results.map((result) => {
       if (result.status === 'fulfilled') {
         return result.value;
       }
 
-      const errorMessage =
-        result.reason instanceof Error
-          ? result.reason.message
-          : 'Unknown error';
+      const errorMessage = result.reason instanceof Error ? result.reason.message : 'Unknown error';
       return {
         error: -1,
         message: errorMessage,
@@ -100,4 +86,3 @@ export class ZnsService {
     });
   }
 }
-

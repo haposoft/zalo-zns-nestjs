@@ -24,6 +24,43 @@ echo "🚀 Bumping version using standard-version..."
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 echo "Current version: $CURRENT_VERSION"
 
+# Predict new version to check if tag exists (only for explicit version types)
+if [ ! -z "$VERSION_TYPE" ] && [ "$FIRST_RELEASE" != true ]; then
+  # Calculate predicted version
+  IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+  MAJOR=${VERSION_PARTS[0]}
+  MINOR=${VERSION_PARTS[1]}
+  PATCH=${VERSION_PARTS[2]}
+  
+  case $VERSION_TYPE in
+    major)
+      MAJOR=$((MAJOR + 1))
+      MINOR=0
+      PATCH=0
+      ;;
+    minor)
+      MINOR=$((MINOR + 1))
+      PATCH=0
+      ;;
+    patch)
+      PATCH=$((PATCH + 1))
+      ;;
+  esac
+  PREDICTED_VERSION="$MAJOR.$MINOR.$PATCH"
+  TAG_NAME="v$PREDICTED_VERSION"
+  
+  # Check and remove existing tag if it exists
+  if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+    echo "⚠️  Tag $TAG_NAME already exists. Removing it..."
+    git tag -d "$TAG_NAME" 2>/dev/null || true
+    # Try to delete remote tag if it exists
+    if git ls-remote --tags origin "$TAG_NAME" >/dev/null 2>&1; then
+      echo "⚠️  Removing remote tag $TAG_NAME..."
+      git push origin ":refs/tags/$TAG_NAME" 2>/dev/null || true
+    fi
+  fi
+fi
+
 # Run tests and build before version bump
 echo "📦 Running tests..."
 npm test
@@ -39,7 +76,24 @@ if [ "$FIRST_RELEASE" = true ]; then
 else
   if [ -z "$VERSION_TYPE" ]; then
     # Auto-detect version bump from conventional commits
-    npx standard-version
+    npx standard-version || {
+      # If tag creation fails, get the version that standard-version tried to create
+      # and remove the tag if it exists
+      NEW_VERSION=$(node -p "require('./package.json').version")
+      TAG_NAME="v$NEW_VERSION"
+      if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+        echo "⚠️  Tag $TAG_NAME exists. Removing and retrying..."
+        git tag -d "$TAG_NAME" 2>/dev/null || true
+        git push origin ":refs/tags/$TAG_NAME" 2>/dev/null || true
+        # Revert package.json version change
+        git checkout package.json 2>/dev/null || true
+        # Retry without tag creation, then create tag manually
+        npx standard-version --skip-tag --skip-commit
+        git tag -a "$TAG_NAME" -m "chore(release): $NEW_VERSION"
+      else
+        exit 1
+      fi
+    }
   else
     npx standard-version --release-as $VERSION_TYPE
   fi
