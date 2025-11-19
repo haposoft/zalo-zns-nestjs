@@ -34,20 +34,27 @@ export class ZnsTokenService implements OnModuleInit {
     });
   }
 
+  /**
+   * Check if a value is valid (not empty string, null, or undefined)
+   */
+  private isValid(value: string | undefined | null): boolean {
+    return !!value && value.trim() !== '';
+  }
+
   async onModuleInit() {
     // Nếu có app_id và app_secret, tự động lấy token
-    if (this.options.appId && this.options.appSecret) {
-      if (this.options.oaCode) {
+    if (this.isValid(this.options.appId) && this.isValid(this.options.appSecret)) {
+      if (this.isValid(this.options.oaCode)) {
         // Lấy token lần đầu bằng OA code
         try {
           await this.getInitialToken();
         } catch (error) {
           this.logger.error('Failed to get initial token, will try on first use', error);
         }
-      } else if (this.options.refreshToken) {
+      } else if (this.isValid(this.options.refreshToken)) {
         // Sử dụng refresh token có sẵn để lấy access token
         try {
-          await this.refreshAccessToken(this.options.refreshToken);
+          await this.refreshAccessToken(this.options.refreshToken!);
         } catch (error) {
           this.logger.error('Failed to refresh token on init, will try on first use', error);
         }
@@ -56,9 +63,9 @@ export class ZnsTokenService implements OnModuleInit {
           'app_id and app_secret provided but no oa_code or refresh_token. Token will be fetched on first use.',
         );
       }
-    } else if (this.options.accessToken) {
+    } else if (this.isValid(this.options.accessToken)) {
       // Sử dụng access token trực tiếp (backward compatible)
-      this.accessToken = this.options.accessToken;
+      this.accessToken = this.options.accessToken!;
       this.logger.log('Using provided access token directly');
     } else {
       this.logger.warn(
@@ -71,7 +78,11 @@ export class ZnsTokenService implements OnModuleInit {
    * Get initial access token using OA code
    */
   private async getInitialToken(): Promise<void> {
-    if (!this.options.appId || !this.options.appSecret || !this.options.oaCode) {
+    if (
+      !this.isValid(this.options.appId) ||
+      !this.isValid(this.options.appSecret) ||
+      !this.isValid(this.options.oaCode)
+    ) {
       throw new Error('app_id, app_secret, and oa_code are required for initial token');
     }
 
@@ -79,9 +90,9 @@ export class ZnsTokenService implements OnModuleInit {
       this.logger.log('Getting initial access token using OA code...');
 
       const params = new URLSearchParams({
-        app_id: this.options.appId,
-        app_secret: this.options.appSecret,
-        code: this.options.oaCode,
+        app_id: this.options.appId!,
+        app_secret: this.options.appSecret!,
+        code: this.options.oaCode!,
       });
 
       const response = await this.oauthAxiosInstance.post<ZaloTokenResponse>(
@@ -111,8 +122,8 @@ export class ZnsTokenService implements OnModuleInit {
    * Refresh access token using refresh token
    */
   private async refreshAccessToken(refreshToken: string): Promise<string> {
-    if (!this.options.appId) {
-      throw new Error('app_id is required for refreshing token');
+    if (!this.isValid(this.options.appId) || !this.isValid(this.options.appSecret)) {
+      throw new Error('app_id and app_secret are required for refreshing token');
     }
 
     try {
@@ -120,7 +131,7 @@ export class ZnsTokenService implements OnModuleInit {
 
       const params = new URLSearchParams({
         refresh_token: refreshToken,
-        app_id: this.options.appId,
+        app_id: this.options.appId!,
         grant_type: 'refresh_token',
       });
 
@@ -155,19 +166,35 @@ export class ZnsTokenService implements OnModuleInit {
    */
   async getAccessToken(): Promise<string> {
     // Nếu có access token trực tiếp (backward compatible)
-    if (this.options.accessToken && !this.options.appId) {
-      return this.options.accessToken;
+    if (this.isValid(this.options.accessToken) && !this.isValid(this.options.appId)) {
+      return this.options.accessToken!;
     }
 
     // Nếu chưa có token và có refresh token, lấy token mới
-    if (!this.accessToken && this.options.refreshToken) {
-      return await this.refreshAccessToken(this.options.refreshToken);
+    if (!this.accessToken && this.isValid(this.options.refreshToken)) {
+      return await this.refreshAccessToken(this.options.refreshToken!);
     }
 
     // Nếu chưa có token và có app_id/app_secret/oa_code, lấy token lần đầu
-    if (!this.accessToken && this.options.appId && this.options.appSecret && this.options.oaCode) {
+    if (
+      !this.accessToken &&
+      this.isValid(this.options.appId) &&
+      this.isValid(this.options.appSecret) &&
+      this.isValid(this.options.oaCode)
+    ) {
       await this.getInitialToken();
       return this.accessToken!;
+    }
+
+    // Nếu chưa có token nhưng có app_id/app_secret và refresh_token, thử refresh
+    if (
+      !this.accessToken &&
+      this.isValid(this.options.appId) &&
+      this.isValid(this.options.appSecret) &&
+      this.isValid(this.refreshToken || this.options.refreshToken)
+    ) {
+      const refreshToken = this.refreshToken || this.options.refreshToken!;
+      return await this.refreshAccessToken(refreshToken);
     }
 
     // Nếu không có token, throw error
