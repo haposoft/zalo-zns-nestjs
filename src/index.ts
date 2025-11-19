@@ -1,8 +1,9 @@
 // Module
 export { ZnsModule } from './zns.module';
 
-// Service
+// Services
 export { ZnsService } from './zns.service';
+export { ZnsTokenService } from './zns-token.service';
 
 // Interfaces
 export { ZnsModuleOptions, ZnsAsyncOptions } from './interfaces/zns-options.interface';

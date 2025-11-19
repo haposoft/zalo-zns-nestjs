@@ -22,6 +22,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
+    "test:send": "ts-node test-send-message.ts",
     "lint:staged": "lint-staged",
     "prepare": "husky || true",
     "version:patch": "./scripts/version-bump.sh patch",

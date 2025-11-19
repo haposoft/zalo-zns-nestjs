@@ -34,6 +34,41 @@ In your project's `package.json`:
 
 ### 1. Import Module
 
+#### Option 1: Automatic Token Management (Recommended)
+
+This option automatically handles token management. Third-party apps only need 3 environment variables.
+
+```typescript
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ZnsModule } from '@haposoft/zalo-zns-nestjs';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    ZnsModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        // OAuth credentials (configured once at platform level)
+        appId: configService.get<string>('ZALO_APP_ID'),
+        appSecret: configService.get<string>('ZALO_APP_SECRET'),
+        oaCode: configService.get<string>('ZALO_OA_CODE'), // Only for initial setup
+        refreshToken: configService.get<string>('ZALO_REFRESH_TOKEN'), // Optional
+
+        // Third-party apps only need these 3 variables
+        apiUrl: configService.get<string>('ZALO_API_URL', 'https://business.openapi.zalo.me'),
+        timeout: configService.get<number>('ZALO_TIMEOUT', 30000),
+        templateId: configService.get<string>('ZALO_TEMPLATE_ID'),
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+#### Option 2: Direct Access Token (Backward Compatible)
+
 #### Synchronous Configuration
 
 ```typescript
@@ -148,13 +183,40 @@ export class NotificationService {
 
 ## Environment Variables
 
+### For Automatic Token Management (Recommended)
+
 Create a `.env` file:
+
+```env
+# OAuth credentials (configured once at platform level)
+ZALO_APP_ID=your-app-id
+ZALO_APP_SECRET=your-app-secret
+ZALO_OA_CODE=your-oa-code  # Only needed for initial setup
+ZALO_REFRESH_TOKEN=your-refresh-token  # Optional, will be saved automatically
+
+# Third-party apps only need these 3 variables
+ZALO_TEMPLATE_ID=your-template-id
+ZALO_API_URL=https://business.openapi.zalo.me
+ZALO_TIMEOUT=30000
+```
+
+### For Direct Access Token (Backward Compatible)
 
 ```env
 ZALO_ACCESS_TOKEN=your-access-token
 ZALO_API_URL=https://business.openapi.zalo.me
 ZALO_TIMEOUT=30000
 ```
+
+## Token Management Features
+
+When using automatic token management (`appId` + `appSecret`):
+
+- ✅ Automatically gets initial access token using OAuth flow
+- ✅ Automatically refreshes token when it expires (5 minutes before expiration)
+- ✅ Thread-safe refresh (prevents multiple simultaneous refresh requests)
+- ✅ Stores refresh token for future use
+- ✅ No manual token management needed
 
 ## API Reference
 

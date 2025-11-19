@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import { ZnsMessage, ZnsSendResponse } from './interfaces/zns-message.interface';
 import {
@@ -8,6 +8,7 @@ import {
   API_ENDPOINT,
 } from './zns.constants';
 import { ZnsModuleOptions } from './interfaces/zns-options.interface';
+import { ZnsTokenService } from './zns-token.service';
 
 @Injectable()
 export class ZnsService {
@@ -17,6 +18,7 @@ export class ZnsService {
   constructor(
     @Inject(ZNS_MODULE_OPTIONS)
     private readonly options: ZnsModuleOptions,
+    @Optional() private readonly tokenService?: ZnsTokenService,
   ) {
     const apiUrl = options.apiUrl || DEFAULT_API_URL;
     this.axiosInstance = axios.create({
@@ -24,8 +26,20 @@ export class ZnsService {
       timeout: options.timeout || DEFAULT_TIMEOUT,
       headers: {
         'Content-Type': 'application/json',
-        access_token: options.accessToken,
       },
+    });
+
+    // Add request interceptor to inject access token
+    this.axiosInstance.interceptors.request.use(async (config) => {
+      if (this.tokenService) {
+        // Use token service if available (automatic token management)
+        const accessToken = await this.tokenService.getAccessToken();
+        config.headers.access_token = accessToken;
+      } else if (this.options.accessToken) {
+        // Fallback to direct access token (backward compatible)
+        config.headers.access_token = this.options.accessToken;
+      }
+      return config;
     });
   }
 

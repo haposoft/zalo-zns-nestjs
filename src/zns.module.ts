@@ -1,33 +1,50 @@
 import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ZnsService } from './zns.service';
+import { ZnsTokenService } from './zns-token.service';
 import { ZnsModuleOptions, ZnsAsyncOptions } from './interfaces/zns-options.interface';
 import { ZNS_MODULE_OPTIONS } from './zns.constants';
 
 @Module({})
 export class ZnsModule {
   /**
+   * Check if token service is needed (when app_id/app_secret are provided)
+   */
+  private static needsTokenService(options: ZnsModuleOptions | ZnsAsyncOptions): boolean {
+    if ('useFactory' in options && options.useFactory) {
+      // For async options, we'll always include token service
+      // It will check internally if it's needed
+      return true;
+    }
+
+    const opts = options as ZnsModuleOptions;
+    return !!(opts.appId && opts.appSecret);
+  }
+
+  /**
    * Create providers array for module configuration
    */
   private static createProviders(options: ZnsModuleOptions | ZnsAsyncOptions): Provider[] {
-    if ('useFactory' in options && options.useFactory) {
-      return [
-        {
-          provide: ZNS_MODULE_OPTIONS,
-          useFactory: options.useFactory,
-          inject: options.inject || [],
-        },
-        ZnsService,
-      ];
-    }
+    const providers: Provider[] = [];
 
-    return [
-      {
+    if ('useFactory' in options && options.useFactory) {
+      providers.push({
+        provide: ZNS_MODULE_OPTIONS,
+        useFactory: options.useFactory,
+        inject: options.inject || [],
+      });
+    } else {
+      providers.push({
         provide: ZNS_MODULE_OPTIONS,
         useValue: options,
-      },
-      ZnsService,
-    ];
+      });
+    }
+
+    // Always include token service (it will handle backward compatibility)
+    providers.push(ZnsTokenService);
+    providers.push(ZnsService);
+
+    return providers;
   }
 
   /**

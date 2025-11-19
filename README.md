@@ -18,7 +18,69 @@ yarn add @haposoft/zalo-zns-nestjs
 
 ## Quick Start
 
-### 1. Import Module
+### Option 1: Automatic Token Management (Recommended for Third-Party Apps)
+
+This option automatically handles access token and refresh token management. Third-party apps only need to provide 3 environment variables.
+
+#### Step 1: Get OAuth Credentials
+
+First, you need to get OAuth credentials from Zalo Developer Console:
+
+1. Go to [Zalo Developers](https://developers.zalo.me/)
+2. Create or select your application
+3. Get your `app_id` and `app_secret`
+4. Get `oa_code` from OAuth callback (see [Zalo OAuth Documentation](https://developers.zalo.me/docs/official-account/bat-dau/xac-thuc-va-uy-quyen-cho-ung-dung-new))
+
+#### Step 2: Configure Module
+
+```typescript
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ZnsModule } from '@haposoft/zalo-zns-nestjs';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    ZnsModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        // OAuth credentials (configured once)
+        appId: configService.get<string>('ZALO_APP_ID'),
+        appSecret: configService.get<string>('ZALO_APP_SECRET'),
+        oaCode: configService.get<string>('ZALO_OA_CODE'), // Only needed for initial setup
+        refreshToken: configService.get<string>('ZALO_REFRESH_TOKEN'), // Optional, will be saved after first use
+
+        // Third-party apps only need these 3 variables
+        apiUrl: configService.get<string>('ZALO_API_URL', 'https://business.openapi.zalo.me'),
+        timeout: configService.get<number>('ZALO_TIMEOUT', 30000),
+        templateId: configService.get<string>('ZALO_TEMPLATE_ID'), // Optional default template
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+#### Simplified Configuration for Third-Party Apps
+
+If `app_id` and `app_secret` are configured at the platform level, third-party apps only need:
+
+```env
+ZALO_TEMPLATE_ID=your-template-id
+ZALO_API_URL=https://business.openapi.zalo.me
+ZALO_TIMEOUT=30000
+```
+
+The module will automatically:
+
+- Get initial access token using `oa_code` (first time only)
+- Refresh access token when it expires
+- Store and reuse refresh token
+
+### Option 2: Direct Access Token (Backward Compatible)
+
+If you already have an access token, you can use it directly:
 
 #### Synchronous Configuration
 
@@ -38,7 +100,7 @@ import { ZnsModule } from '@haposoft/zalo-zns-nestjs';
 export class AppModule {}
 ```
 
-#### Asynchronous Configuration (Recommended)
+#### Asynchronous Configuration
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -169,11 +231,23 @@ Send multiple ZNS notifications.
 
 ```typescript
 interface ZnsModuleOptions {
-  accessToken: string; // Required: Zalo access token
+  // Option 1: Direct access token (backward compatible)
+  accessToken?: string;
+
+  // Option 2: OAuth credentials for automatic token management
+  appId?: string; // Zalo app ID
+  appSecret?: string; // Zalo app secret
+  oaCode?: string; // OA code from OAuth callback (for initial token)
+  refreshToken?: string; // Refresh token (optional, will be saved after first use)
+
+  // Common options
   apiUrl?: string; // Optional: API URL (default: 'https://business.openapi.zalo.me')
   timeout?: number; // Optional: Request timeout in ms (default: 30000)
+  templateId?: string; // Optional: Default template ID
 }
 ```
+
+**Note**: Either provide `accessToken` directly OR provide `appId` + `appSecret` + `oaCode` for automatic token management.
 
 #### `ZnsMessage`
 
@@ -200,11 +274,39 @@ interface ZnsSendResponse {
 
 ## Environment Variables
 
+### For Automatic Token Management (Recommended)
+
+```env
+# OAuth credentials (configured once at platform level)
+ZALO_APP_ID=your-app-id
+ZALO_APP_SECRET=your-app-secret
+ZALO_OA_CODE=your-oa-code  # Only needed for initial setup
+ZALO_REFRESH_TOKEN=your-refresh-token  # Optional, will be saved automatically
+
+# Third-party apps only need these 3 variables
+ZALO_TEMPLATE_ID=your-template-id
+ZALO_API_URL=https://business.openapi.zalo.me
+ZALO_TIMEOUT=30000
+```
+
+### For Direct Access Token (Backward Compatible)
+
 ```env
 ZALO_ACCESS_TOKEN=your-access-token
 ZALO_API_URL=https://business.openapi.zalo.me
 ZALO_TIMEOUT=30000
 ```
+
+## Token Management
+
+The module automatically handles:
+
+- ✅ Getting initial access token using OAuth flow
+- ✅ Refreshing access token when it expires (before 5 minutes of expiration)
+- ✅ Storing refresh token for future use
+- ✅ Thread-safe token refresh (prevents multiple simultaneous refresh requests)
+
+You don't need to manually manage tokens when using `appId` + `appSecret` configuration.
 
 ## License
 
